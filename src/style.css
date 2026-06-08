@@ -336,6 +336,12 @@ body {
   padding-top: 0.5em;
 }
 
+/* Keep furigana-equivalent space for JSS verses without furigana in aligned mode */
+[data-arrangement="aligned"] .panel[data-lang="jss"] .verse-text-plain {
+  display: inline-block;
+  padding-top: 0.5em;
+}
+
 /* ── 16. Furigana / Ruby ───────────────────────────────────── */
 ruby {
   ruby-align: center;
