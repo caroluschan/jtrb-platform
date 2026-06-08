@@ -1,11 +1,20 @@
 import { Kuroshiro } from 'kuroshiro-browser';
 
+const KANJI_RE = /[\u4e00-\u9faf\u3400-\u4dbf]/;
+const FOOTNOTE_RE = /<\/?[fn][^>]*>/g;
+
+let kuroshiroInstance: Kuroshiro | null = null;
+let initPromise: Promise<Kuroshiro> | null = null;
+
+const cache = new Map<string, string>();
+
 let interceptorInstalled = false;
 
 function installDictInterceptor(): void {
   if (interceptorInstalled) return;
   interceptorInstalled = true;
   if (typeof window === 'undefined') return;
+  if (window.location.hostname === 'localhost') return;
 
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async function (
@@ -25,9 +34,7 @@ function installDictInterceptor(): void {
       return nativeFetch(input, init);
     }
 
-    const filename = url.split('/').pop()!;
-    const prodUrl = `${window.location.origin}/jtrb-platform/dict/${filename}`;
-    const response = await nativeFetch(prodUrl, init);
+    const response = await nativeFetch(input, init);
     if (!response.ok) return response;
 
     const buffer = await response.arrayBuffer();
@@ -66,14 +73,6 @@ function installDictInterceptor(): void {
   };
 }
 
-const KANJI_RE = /[\u4e00-\u9faf\u3400-\u4dbf]/;
-const FOOTNOTE_RE = /<\/?[fn][^>]*>/g;
-
-let kuroshiroInstance: Kuroshiro | null = null;
-let initPromise: Promise<Kuroshiro> | null = null;
-
-const cache = new Map<string, string>();
-
 export function initFurigana(_isProd?: boolean): Promise<Kuroshiro> {
   if (kuroshiroInstance) {
     return Promise.resolve(kuroshiroInstance);
@@ -82,7 +81,7 @@ export function initFurigana(_isProd?: boolean): Promise<Kuroshiro> {
     return initPromise;
   }
   installDictInterceptor();
-  initPromise = Kuroshiro.buildAndInitWithKuromoji(false).then((instance) => {
+  initPromise = Kuroshiro.buildAndInitWithKuromoji(true).then((instance) => {
     kuroshiroInstance = instance;
     return instance;
   });
