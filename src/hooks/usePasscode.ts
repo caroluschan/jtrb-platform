@@ -9,12 +9,20 @@ export function usePasscode(): {
 } {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return sessionStorage.getItem(SESSION_KEY) === '1';
+    try {
+      return sessionStorage.getItem(SESSION_KEY) === '1';
+    } catch {
+      return false;
+    }
   });
 
   const authenticate = useCallback((pin: string): boolean => {
     if (pin === CORRECT_PIN) {
-      sessionStorage.setItem(SESSION_KEY, '1');
+      try {
+        sessionStorage.setItem(SESSION_KEY, '1');
+      } catch {
+        // sessionStorage unavailable
+      }
       setIsAuthenticated(true);
       return true;
     }

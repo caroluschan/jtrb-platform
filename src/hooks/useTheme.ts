@@ -16,21 +16,34 @@ function applyTheme(theme: Theme): void {
 export function useTheme(): { theme: Theme; toggle: () => void } {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'light';
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark') return stored;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === 'light' || stored === 'dark') return stored;
+    } catch {
+      // localStorage unavailable
+    }
     return getSystemPreference();
   });
 
   useEffect(() => {
     applyTheme(theme);
-    localStorage.setItem(STORAGE_KEY, theme);
+    try {
+      localStorage.setItem(STORAGE_KEY, theme);
+    } catch {
+      // localStorage unavailable
+    }
   }, [theme]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem(STORAGE_KEY);
+      } catch {
+        // localStorage unavailable
+      }
       if (!stored) {
         const newTheme = e.matches ? 'dark' : 'light';
         setTheme(newTheme);
