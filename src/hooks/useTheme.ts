@@ -13,8 +13,8 @@ function applyTheme(theme: Theme): void {
   document.documentElement.setAttribute('data-theme', theme);
 }
 
-export function useTheme(): { theme: Theme; toggle: () => void } {
-  const [theme, setTheme] = useState<Theme>(() => {
+export function useTheme(): { theme: Theme; toggle: () => void; setTheme: (t: Theme) => void } {
+  const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'light';
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -46,16 +46,20 @@ export function useTheme(): { theme: Theme; toggle: () => void } {
       }
       if (!stored) {
         const newTheme = e.matches ? 'dark' : 'light';
-        setTheme(newTheme);
+        setThemeState(newTheme);
       }
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const toggle = useCallback(() => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  const setTheme = useCallback((t: Theme) => {
+    setThemeState(t);
   }, []);
 
-  return { theme, toggle };
+  const toggle = useCallback(() => {
+    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
+  }, []);
+
+  return { theme, toggle, setTheme };
 }

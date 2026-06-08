@@ -24,3 +24,10 @@ export interface BibleDB {
   jss: import('sql.js').Database;
   rcuv: import('sql.js').Database;
 }
+
+export type ArrangementMode = 'default' | 'aligned';
+
+export interface Settings {
+  fontSize: number;
+  arrangement: ArrangementMode;
+}

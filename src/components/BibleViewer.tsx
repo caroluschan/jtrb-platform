@@ -2,10 +2,13 @@ import { useCallback, useRef, useState } from "preact/hooks";
 import { useBible } from "../hooks/useBible";
 import { useDatabase } from "../hooks/useDatabase";
 import { useScrollSync } from "../hooks/useScrollSync";
+import { useVerseAlign } from "../hooks/useVerseAlign";
 import { BiblePanel } from "./BiblePanel";
 import { BookChapterNav } from "./BookChapterNav";
 import { ChapterNav } from "./ChapterNav";
-import { ThemeToggle } from "./ThemeToggle";
+import { SettingsPopup } from "./SettingsPopup";
+import { useSettings } from "../hooks/useSettings";
+import { useTheme } from "../hooks/useTheme";
 
 export function BibleViewer() {
 	const { state: dbState, dbs, error: dbError } = useDatabase();
@@ -22,7 +25,16 @@ export function BibleViewer() {
 
 	const leftPanelRef = useRef<HTMLDivElement>(null);
 	const rightPanelRef = useRef<HTMLDivElement>(null);
+	const { settings, setFontSize, setArrangement } = useSettings();
+	const { theme, setTheme } = useTheme();
 	const panelsReady = dbState === "ready" && !bibleLoading && verses.length > 0;
+
+	useVerseAlign({
+		leftRef: leftPanelRef,
+		rightRef: rightPanelRef,
+		enabled: settings.arrangement === 'aligned' && panelsReady,
+		versesKey: verses,
+	});
 
 	useScrollSync(leftPanelRef, rightPanelRef, panelsReady);
 
@@ -71,7 +83,7 @@ export function BibleViewer() {
 					chapterCount={chapterCountBible}
 					onNavigate={handleNavigate}
 				/>
-				<ThemeToggle />
+				<SettingsPopup theme={theme} setTheme={setTheme} settings={settings} setFontSize={setFontSize} setArrangement={setArrangement} />
 			</header>
 			<div class="panels">
 				{bibleLoading ? (
@@ -95,8 +107,8 @@ export function BibleViewer() {
 					</div>
 				) : (
 					<>
-						<BiblePanel ref={leftPanelRef} lang="jss" verses={verses} />
-						<BiblePanel ref={rightPanelRef} lang="rcuv" verses={verses} />
+						<BiblePanel ref={leftPanelRef} lang="jss" verses={verses} arrangement={settings.arrangement} />
+						<BiblePanel ref={rightPanelRef} lang="rcuv" verses={verses} arrangement={settings.arrangement} />
 					</>
 				)}
 			</div>

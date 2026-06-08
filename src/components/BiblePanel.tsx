@@ -1,16 +1,17 @@
 import { forwardRef } from 'preact/compat';
 import { useMemo, useEffect, useState } from 'preact/hooks';
-import type { MergedVerse } from '../types';
+import type { MergedVerse, ArrangementMode } from '../types';
 import { useFurigana } from '../hooks/useFurigana';
 import { cleanRcuvText } from '../utils/cleanText';
 
 interface BiblePanelProps {
   lang: 'jss' | 'rcuv';
   verses: MergedVerse[];
+  arrangement: ArrangementMode;
 }
 
 export const BiblePanel = forwardRef<HTMLDivElement, BiblePanelProps>(
-  ({ lang, verses }, ref) => {
+  ({ lang, verses, arrangement }, ref) => {
     const [processedHtml, setProcessedHtml] = useState<Record<number, string>>({});
     const [processing, setProcessing] = useState(false);
     const { processVerse, isReady: furiganaReady } = useFurigana();
