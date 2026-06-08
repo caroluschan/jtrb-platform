@@ -28,7 +28,7 @@ export function BookChapterNav({
 }: BookChapterNavProps) {
 	const [savedBook, setSavedBook] = useLocalStorage<number>(
 		"jvc-last-book",
-		10,
+		1,
 	);
 	const [savedChapter, setSavedChapter] = useLocalStorage<number>(
 		"jvc-last-chapter",

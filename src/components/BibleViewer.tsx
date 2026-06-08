@@ -41,6 +41,12 @@ export function BibleViewer() {
 	const handleNavigate = useCallback((book: number, ch: number) => {
 		setBookNumber(book);
 		setChapter(ch);
+		try {
+			localStorage.setItem('jvc-last-book', String(book));
+			localStorage.setItem('jvc-last-chapter', String(ch));
+		} catch {
+			// localStorage unavailable
+		}
 	}, []);
 
 	if (dbState === "loading") {
