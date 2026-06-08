@@ -1,5 +1,45 @@
 import { Kuroshiro } from 'kuroshiro-browser';
 
+let interceptorInstalled = false;
+
+function installBrotliInterceptor(): void {
+  if (interceptorInstalled) return;
+  interceptorInstalled = true;
+
+  if (import.meta.env.DEV) return;
+  if (typeof window === 'undefined' || typeof DecompressionStream === 'undefined') return;
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async function (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> {
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input instanceof Request
+            ? input.url
+            : '';
+
+    if (url.includes('/dict/') && url.endsWith('.br')) {
+      const response = await originalFetch(input, init);
+      if (!response.ok || !response.body) return response;
+
+      const ds = new DecompressionStream('brotli' as CompressionFormat);
+      const decompressedStream = response.body.pipeThrough(ds);
+      return new Response(decompressedStream, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
+
+    return originalFetch(input, init);
+  };
+}
+
 // Regex to match any CJK unified ideograph (kanji) range
 const KANJI_RE = /[\u4e00-\u9faf\u3400-\u4dbf]/;
 
@@ -18,6 +58,7 @@ export function initFurigana(isProd = true): Promise<Kuroshiro> {
   if (initPromise) {
     return initPromise;
   }
+  installBrotliInterceptor();
   initPromise = Kuroshiro.buildAndInitWithKuromoji(isProd).then((instance) => {
     kuroshiroInstance = instance;
     return instance;
