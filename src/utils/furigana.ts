@@ -2,41 +2,6 @@ import { Kuroshiro } from 'kuroshiro-browser';
 
 let interceptorInstalled = false;
 
-async function decompressBrotliResponse(
-  response: Response,
-): Promise<Response> {
-  const compressed = await response.arrayBuffer();
-  const ds = new DecompressionStream('brotli' as CompressionFormat);
-  const writer = ds.writable.getWriter();
-  writer.write(compressed);
-  writer.close();
-
-  const reader = ds.readable.getReader();
-  const chunks: Uint8Array[] = [];
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-
-  let total = 0;
-  for (const c of chunks) total += c.byteLength;
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const c of chunks) {
-    result.set(c, offset);
-    offset += c.byteLength;
-  }
-
-  return new Response(result, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: {
-      'Content-Type': 'application/octet-stream',
-    },
-  });
-}
-
 function installBrotliInterceptor(): void {
   if (interceptorInstalled) return;
   interceptorInstalled = true;
@@ -62,10 +27,41 @@ function installBrotliInterceptor(): void {
     if (url.includes('/dict/') && url.endsWith('.br')) {
       const response = await originalFetch(input, init);
       if (!response.ok) return response;
+
+      const buffer = await response.arrayBuffer();
+
       try {
-        return await decompressBrotliResponse(response);
+        const ds = new DecompressionStream('brotli' as CompressionFormat);
+        const writer = ds.writable.getWriter();
+        writer.write(buffer);
+        writer.close();
+
+        const reader = ds.readable.getReader();
+        const chunks: Uint8Array[] = [];
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+        }
+
+        let total = 0;
+        for (const c of chunks) total += c.byteLength;
+        const result = new Uint8Array(total);
+        let offset = 0;
+        for (const c of chunks) {
+          result.set(c, offset);
+          offset += c.byteLength;
+        }
+
+        return new Response(result, {
+          status: response.status,
+          headers: { 'Content-Type': 'application/octet-stream' },
+        });
       } catch {
-        return response;
+        return new Response(buffer, {
+          status: response.status,
+          headers: { 'Content-Type': 'application/octet-stream' },
+        });
       }
     }
 
