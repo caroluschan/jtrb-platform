@@ -33,7 +33,7 @@ function installBrotliInterceptor(): void {
       try {
         const ds = new DecompressionStream('brotli' as CompressionFormat);
         const writer = ds.writable.getWriter();
-        writer.write(buffer);
+        writer.write(new Uint8Array(buffer));
         writer.close();
 
         const reader = ds.readable.getReader();
