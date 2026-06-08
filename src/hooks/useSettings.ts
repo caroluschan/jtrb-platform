@@ -23,6 +23,11 @@ export function useSettings(): UseSettingsReturn {
     document.documentElement.style.setProperty('--font-size', `${settings.fontSize}px`);
   }, [settings.fontSize]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-arrangement', settings.arrangement);
+  }, [settings.arrangement]);
+
   const setFontSize = useCallback((size: number) => {
     setSettings(prev => ({ ...prev, fontSize: size }));
   }, [setSettings]);

@@ -79,7 +79,7 @@ export const BiblePanel = forwardRef<HTMLDivElement, BiblePanelProps>(
 
     if (processing && lang === 'jss') {
       return (
-        <div class="panel" ref={ref}>
+        <div class="panel" ref={ref} data-lang={lang}>
           <div class="loading-container">
             <div class="spinner" />
             <div class="loading-text">Processing furigana...</div>
@@ -89,7 +89,7 @@ export const BiblePanel = forwardRef<HTMLDivElement, BiblePanelProps>(
     }
 
     return (
-      <div class="panel" ref={ref}>
+      <div class="panel" ref={ref} data-lang={lang}>
         {renderedVerses}
       </div>
     );

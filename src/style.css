@@ -331,6 +331,11 @@ body {
   font-style: italic;
 }
 
+/* Compensate for furigana height in RCUV panel during aligned mode */
+[data-arrangement="aligned"] .panel[data-lang="rcuv"] .verse {
+  padding-top: 0.5em;
+}
+
 /* ── 16. Furigana / Ruby ───────────────────────────────────── */
 ruby {
   ruby-align: center;
