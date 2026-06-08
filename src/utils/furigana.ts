@@ -34,7 +34,7 @@ function installBrotliInterceptor(): void {
         const ds = new DecompressionStream('brotli' as CompressionFormat);
         const writer = ds.writable.getWriter();
         writer.write(new Uint8Array(buffer));
-        writer.close();
+        await writer.close();
 
         const reader = ds.readable.getReader();
         const chunks: Uint8Array[] = [];
