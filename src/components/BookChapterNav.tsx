@@ -1,96 +1,299 @@
-import { useState, useEffect, useMemo, useCallback } from 'preact/hooks';
-import type { Database } from 'sql.js';
-import type { Book } from '../types';
-import { getBooks, getMaxChapter } from '../utils/bible';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "preact/hooks";
+import type { Database } from "sql.js";
+import { useLocalStorage } from "../hooks/useLocalStorage";
+import type { Book } from "../types";
+import { getBooks, getMaxChapter } from "../utils/bible";
 
 interface BookChapterNavProps {
-  rcuvDb: Database | null;
-  jssDb: Database | null;
-  onNavigate: (bookNumber: number, chapter: number) => void;
+	rcuvDb: Database | null;
+	jssDb: Database | null;
+	bookNumber: number | null;
+	chapter: number | null;
+	chapterCount: number;
+	onNavigate: (bookNumber: number, chapter: number) => void;
 }
 
-export function BookChapterNav({ rcuvDb, jssDb, onNavigate }: BookChapterNavProps) {
-  const [savedBook, setSavedBook] = useLocalStorage<number>('jvc-last-book', 10);
-  const [savedChapter, setSavedChapter] = useLocalStorage<number>('jvc-last-chapter', 1);
-  const [selectedBook, setSelectedBook] = useState<number>(savedBook);
-  const [selectedChapter, setSelectedChapter] = useState<number>(savedChapter);
+export function BookChapterNav({
+	rcuvDb,
+	jssDb,
+	bookNumber,
+	chapter,
+	onNavigate,
+}: BookChapterNavProps) {
+	const [savedBook, setSavedBook] = useLocalStorage<number>(
+		"jvc-last-book",
+		10,
+	);
+	const [savedChapter, setSavedChapter] = useLocalStorage<number>(
+		"jvc-last-chapter",
+		1,
+	);
 
-  // Build merged book list: pair RCUV and JSS names
-  const books = useMemo(() => {
-    if (!rcuvDb || !jssDb) return [] as (Book & { jssName: string })[];
-    const rcuvBooks = getBooks(rcuvDb);
-    const jssBooks = getBooks(jssDb);
-    const jssMap = new Map(jssBooks.map(b => [b.book_number, b.long_name]));
-    return rcuvBooks
-      .filter(b => jssMap.has(b.book_number))
-      .map(b => ({ ...b, jssName: jssMap.get(b.book_number)! }));
-  }, [rcuvDb, jssDb]);
+	// Modal state
+	const [isOpen, setIsOpen] = useState(false);
+	const [mode, setMode] = useState<"book" | "chapter">("book");
+	const [filterText, setFilterText] = useState("");
+	const [pendingBook, setPendingBook] = useState<number | null>(null);
+	const filterRef = useRef<HTMLInputElement>(null);
 
-  // Chapter count for selected book
-  const [chapterCount, setChapterCount] = useState(0);
-  useEffect(() => {
-    if (!rcuvDb || !selectedBook) {
-      setChapterCount(0);
-      return;
-    }
-    try {
-      const count = getMaxChapter(rcuvDb, selectedBook);
-      setChapterCount(count);
-    } catch {
-      setChapterCount(0);
-    }
-  }, [rcuvDb, selectedBook]);
+	// Build merged book list: pair RCUV and JSS names
+	const books = useMemo(() => {
+		if (!rcuvDb || !jssDb) return [] as (Book & { jssName: string })[];
+		const rcuvBooks = getBooks(rcuvDb);
+		const jssBooks = getBooks(jssDb);
+		const jssMap = new Map(jssBooks.map((b) => [b.book_number, b.long_name]));
+		return rcuvBooks.flatMap((b) => {
+			const jssName = jssMap.get(b.book_number);
+			return jssName ? [{ ...b, jssName }] : [];
+		});
+	}, [rcuvDb, jssDb]);
 
-  // Navigate on mount (restore saved position)
-  useEffect(() => {
-    if (selectedBook && savedChapter) {
-      onNavigate(selectedBook, savedChapter);
-    }
-  }, []); // only on mount
+	// Navigate on mount (restore saved position)
+	useEffect(() => {
+		if (savedBook && savedChapter) {
+			onNavigate(savedBook, savedChapter);
+		}
+		// Only run on mount
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
-  // Ensure chapter is valid when chapter count changes
-  useEffect(() => {
-    if (chapterCount > 0 && selectedChapter > chapterCount) {
-      setSelectedChapter(1);
-    }
-  }, [chapterCount, selectedChapter]);
+	// Auto-focus filter input when modal opens in book mode
+	useEffect(() => {
+		if (isOpen && mode === "book" && filterRef.current) {
+			// Small delay so the input is in the DOM
+			const timer = setTimeout(() => filterRef.current?.focus(), 50);
+			return () => clearTimeout(timer);
+		}
+	}, [isOpen, mode]);
 
-  const handleBookChange = useCallback((e: Event) => {
-    const value = parseInt((e.target as HTMLSelectElement).value);
-    setSelectedBook(value);
-    setSavedBook(value);
-  }, [setSavedBook]);
+	// Close on Escape key
+	useEffect(() => {
+		if (!isOpen) return;
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") closePanel();
+		};
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isOpen]);
 
-  const handleChapterChange = useCallback((e: Event) => {
-    const value = parseInt((e.target as HTMLSelectElement).value);
-    setSelectedChapter(value);
-    setSavedChapter(value);
-    onNavigate(selectedBook, value);
-  }, [onNavigate, selectedBook, setSavedChapter]);
+	// Chapter count for the pending book (modal chapter grid)
+	const [pendingChapterCount, setPendingChapterCount] = useState(0);
+	useEffect(() => {
+		if (!rcuvDb || pendingBook === null) {
+			setPendingChapterCount(0);
+			return;
+		}
+		try {
+			const count = getMaxChapter(rcuvDb, pendingBook);
+			setPendingChapterCount(count);
+		} catch {
+			setPendingChapterCount(0);
+		}
+	}, [rcuvDb, pendingBook]);
 
-  const chapters = useMemo(() => {
-    const options = [];
-    for (let i = 1; i <= chapterCount; i++) {
-      options.push(<option value={i} key={i}>{i}</option>);
-    }
-    return options;
-  }, [chapterCount]);
+	// Filter books by typed text
+	const filteredBooks = useMemo(() => {
+		if (!filterText.trim()) return books;
+		const lower = filterText.toLowerCase();
+		return books.filter(
+			(b) =>
+				b.long_name.toLowerCase().includes(lower) ||
+				b.jssName.toLowerCase().includes(lower) ||
+				b.short_name.toLowerCase().includes(lower),
+		);
+	}, [books, filterText]);
 
-  return (
-    <div class="nav-group">
-      <span class="nav-label">Book</span>
-      <select value={selectedBook} onChange={handleBookChange}>
-        {books.map(book => (
-          <option value={book.book_number} key={book.book_number}>
-            {book.long_name} {book.jssName}
-          </option>
-        ))}
-      </select>
-      <span class="nav-label">Ch</span>
-      <select value={selectedChapter} onChange={handleChapterChange} disabled={chapterCount === 0}>
-        {chapters}
-      </select>
-    </div>
-  );
+	// Current book display name
+	const currentBookName = useMemo(() => {
+		if (bookNumber === null || !books.length) return "";
+		const book = books.find((b) => b.book_number === bookNumber);
+		return book ? book.long_name : "";
+	}, [books, bookNumber]);
+
+	const displayText =
+		bookNumber !== null && chapter !== null
+			? `${currentBookName} ${chapter}`
+			: "Select...";
+
+	const openPanel = useCallback(() => {
+		setMode("book");
+		setFilterText("");
+		setPendingBook(null);
+		setIsOpen(true);
+	}, []);
+
+	const closePanel = useCallback(() => {
+		setIsOpen(false);
+		setFilterText("");
+		setPendingBook(null);
+	}, []);
+
+	const handleBookSelect = useCallback((bookNum: number) => {
+		setPendingBook(bookNum);
+		setMode("chapter");
+		setFilterText("");
+	}, []);
+
+	const handleChapterSelect = useCallback(
+		(ch: number) => {
+			if (pendingBook === null) return;
+			onNavigate(pendingBook, ch);
+			setSavedBook(pendingBook);
+			setSavedChapter(ch);
+			closePanel();
+		},
+		[pendingBook, onNavigate, setSavedBook, setSavedChapter, closePanel],
+	);
+
+	const handleBackToBook = useCallback(() => {
+		setMode("book");
+		setPendingBook(null);
+		setFilterText("");
+	}, []);
+
+	const handleOverlayClick = useCallback(
+		(e: MouseEvent) => {
+			if (e.target === e.currentTarget) closePanel();
+		},
+		[closePanel],
+	);
+
+	const handleOverlayKeyDown = useCallback(
+		(e: KeyboardEvent) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				closePanel();
+			}
+		},
+		[closePanel],
+	);
+
+	// Generate chapter grid buttons
+	const chapterGrid = useMemo(() => {
+		const items = [];
+		for (let i = 1; i <= pendingChapterCount; i++) {
+			const isCurrent = pendingBook === bookNumber && i === chapter;
+			items.push(
+				<button
+					key={i}
+					class={`nav-chapter-item${isCurrent ? " current" : ""}`}
+					onClick={() => handleChapterSelect(i)}
+					type="button"
+				>
+					{i}
+				</button>,
+			);
+		}
+		return items;
+	}, [
+		pendingChapterCount,
+		pendingBook,
+		bookNumber,
+		chapter,
+		handleChapterSelect,
+	]);
+
+	return (
+		<div class="nav-group">
+			<button class="nav-trigger" onClick={openPanel} type="button">
+				{displayText}
+				<span class="nav-trigger-chevron">▾</span>
+			</button>
+
+			{isOpen && (
+				<button
+					class="nav-overlay"
+					onClick={handleOverlayClick}
+					onKeyDown={handleOverlayKeyDown}
+					type="button"
+					aria-label="Close navigation"
+				>
+					<div class="nav-panel">
+						{/* ── Book Selection Mode ── */}
+						{mode === "book" && (
+							<>
+								<div class="nav-panel-header">
+									<span class="nav-label">BOOK</span>
+									<button
+										class="nav-panel-close"
+										onClick={closePanel}
+										type="button"
+									>
+										Cancel
+									</button>
+								</div>
+								<div class="nav-filter">
+									<input
+										ref={filterRef}
+										type="text"
+										placeholder="Filter Books..."
+										value={filterText}
+										onInput={(e) =>
+											setFilterText((e.target as HTMLInputElement).value)
+										}
+									/>
+								</div>
+								<div class="nav-book-list">
+									{filteredBooks.length === 0 ? (
+										<div class="nav-empty">No books found</div>
+									) : (
+										filteredBooks.map((book) => {
+											const isSelected = book.book_number === bookNumber;
+											return (
+												<button
+													key={book.book_number}
+													class={`nav-book-item${isSelected ? " selected" : ""}`}
+													onClick={() => handleBookSelect(book.book_number)}
+													type="button"
+												>
+													{book.long_name} {book.jssName}
+												</button>
+											);
+										})
+									)}
+								</div>
+							</>
+						)}
+
+						{/* ── Chapter Selection Mode ── */}
+						{mode === "chapter" && (
+							<>
+								<div class="nav-panel-header">
+									<button
+										class="nav-panel-back"
+										onClick={handleBackToBook}
+										type="button"
+									>
+										← Back
+									</button>
+									<span class="nav-label">CHAPTER</span>
+									<button
+										class="nav-panel-close"
+										onClick={closePanel}
+										type="button"
+									>
+										Cancel
+									</button>
+								</div>
+								<div class="nav-chapter-grid">
+									{pendingChapterCount === 0 ? (
+										<div class="nav-empty">Loading chapters...</div>
+									) : (
+										chapterGrid
+									)}
+								</div>
+							</>
+						)}
+					</div>
+				</button>
+			)}
+		</div>
+	);
 }
