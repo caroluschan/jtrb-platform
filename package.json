@@ -13,17 +13,18 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "brotli-wasm": "^3.0.1",
+    "kuroshiro-browser": "^0.1.0",
     "preact": "^10.26.4",
-    "sql.js": "^1.11.0",
-    "kuroshiro-browser": "^0.1.0"
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
-    "vite": "^6.3.2",
-    "@preact/preset-vite": "^2.10.1",
-    "typescript": "^5.8.3",
-    "vitest": "^3.1.1",
     "@playwright/test": "^1.52.0",
+    "@preact/preset-vite": "^2.10.1",
+    "@types/sql.js": "^1.4.9",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.2",
     "vite-plugin-pwa": "^1.0.0",
-    "@types/sql.js": "^1.4.9"
+    "vitest": "^3.1.1"
   }
 }

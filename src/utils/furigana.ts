@@ -1,4 +1,14 @@
 import { Kuroshiro } from 'kuroshiro-browser';
+import brotliWasmPromise from 'brotli-wasm';
+
+let brotliWasmModule: Awaited<typeof brotliWasmPromise> | null = null;
+
+async function getBrotliWasm() {
+  if (!brotliWasmModule) {
+    brotliWasmModule = await brotliWasmPromise;
+  }
+  return brotliWasmModule;
+}
 
 const KANJI_RE = /[\u4e00-\u9faf\u3400-\u4dbf]/;
 const FOOTNOTE_RE = /<\/?[fn][^>]*>/g;
@@ -40,35 +50,28 @@ function installDictInterceptor(): void {
     const buffer = await response.arrayBuffer();
 
     try {
-      const ds = new DecompressionStream('brotli' as CompressionFormat);
-      const writer = ds.writable.getWriter();
-      writer.write(new Uint8Array(buffer));
-      await writer.close();
+      const wasm = await getBrotliWasm();
+      const decompressed = wasm.decompress(new Uint8Array(buffer));
+      if (!decompressed) throw new Error('brotli decompression returned null');
 
-      const reader = ds.readable.getReader();
-      const chunks: Uint8Array[] = [];
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-      }
-
-      let total = 0;
-      for (const c of chunks) total += c.byteLength;
-      const result = new Uint8Array(total);
-      let offset = 0;
-      for (const c of chunks) {
-        result.set(c, offset);
-        offset += c.byteLength;
-      }
-
+      const result = new Uint8Array(
+        decompressed.buffer,
+        decompressed.byteOffset,
+        decompressed.byteLength,
+      );
       const headers = new Headers();
       headers.set('Content-Type', 'application/octet-stream');
-      return new Response(result, { status: response.status, headers });
+      return new Response(result as unknown as BodyInit, {
+        status: response.status,
+        headers,
+      });
     } catch {
       const headers = new Headers();
       headers.set('Content-Type', 'application/octet-stream');
-      return new Response(buffer, { status: response.status, headers });
+      return new Response(buffer, {
+        status: response.status,
+        headers,
+      });
     }
   };
 }
