@@ -97,7 +97,7 @@ export function SettingsPopup({ theme, setTheme, settings, setFontSize, setArran
                 value={settings.arrangement}
                 onChange={(e) => setArrangement((e.target as HTMLSelectElement).value as ArrangementMode)}
               >
-                <option value="default">Default</option>
+                <option value="natural">Natural</option>
                 <option value="aligned">Aligned</option>
               </select>
             </div>

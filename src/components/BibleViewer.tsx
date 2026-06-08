@@ -36,7 +36,7 @@ export function BibleViewer() {
 		versesKey: verses,
 	});
 
-	useScrollSync(leftPanelRef, rightPanelRef, panelsReady);
+	useScrollSync(leftPanelRef, rightPanelRef, panelsReady && settings.arrangement === 'aligned');
 
 	const handleNavigate = useCallback((book: number, ch: number) => {
 		setBookNumber(book);

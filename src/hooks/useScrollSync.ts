@@ -3,12 +3,13 @@ import { useEffect, useRef } from 'preact/hooks';
 export function useScrollSync(
   leftRef: { readonly current: HTMLDivElement | null },
   rightRef: { readonly current: HTMLDivElement | null },
-  ready: boolean,
+  syncEnabled: boolean,
 ): void {
   const isSyncing = useRef(false);
+  const anchorRef = useRef<'left' | 'right'>('left');
 
   useEffect(() => {
-    if (!ready) return;
+    if (!syncEnabled) return;
 
     const leftEl = leftRef.current;
     const rightEl = rightRef.current;
@@ -16,40 +17,33 @@ export function useScrollSync(
 
     let rafId: number | null = null;
 
-    const scrollHandler = (source: HTMLDivElement, target: HTMLDivElement) => {
+    const sync = (source: HTMLDivElement, target: HTMLDivElement, side: 'left' | 'right') => {
       if (isSyncing.current) return;
+
+      anchorRef.current = side;
       isSyncing.current = true;
 
-      // Cancel pending RAF
       if (rafId !== null) cancelAnimationFrame(rafId);
 
       rafId = requestAnimationFrame(() => {
-        // Calculate scroll percentage of source
-        const maxScroll = source.scrollHeight - source.clientHeight;
-        if (maxScroll <= 0) {
-          isSyncing.current = false;
-          return;
-        }
-        const scrollPercent = source.scrollTop / maxScroll;
-
-        // Apply same percentage to target
-        const targetMax = target.scrollHeight - target.clientHeight;
-        target.scrollTop = scrollPercent * targetMax;
-
-        isSyncing.current = false;
+        target.scrollTop = source.scrollTop;
+        requestAnimationFrame(() => { isSyncing.current = false; });
       });
     };
 
-    const onLeftScroll = () => scrollHandler(leftEl, rightEl);
-    const onRightScroll = () => scrollHandler(rightEl, leftEl);
+    const onLeftScroll = () => sync(leftEl, rightEl, 'left');
+    const onRightScroll = () => sync(rightEl, leftEl, 'right');
 
-    leftEl.addEventListener('scroll', onLeftScroll, { passive: true });
-    rightEl.addEventListener('scroll', onRightScroll, { passive: true });
+    const timer = setTimeout(() => {
+      leftEl.addEventListener('scroll', onLeftScroll, { passive: true });
+      rightEl.addEventListener('scroll', onRightScroll, { passive: true });
+    }, 100);
 
     return () => {
+      clearTimeout(timer);
       leftEl.removeEventListener('scroll', onLeftScroll);
       rightEl.removeEventListener('scroll', onRightScroll);
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [ready]);
+  }, [syncEnabled]);
 }

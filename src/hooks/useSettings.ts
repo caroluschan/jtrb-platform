@@ -4,7 +4,7 @@ import type { Settings, ArrangementMode } from '../types';
 
 const DEFAULT_SETTINGS: Settings = {
   fontSize: 16,
-  arrangement: 'default',
+  arrangement: 'aligned',
 };
 
 const STORAGE_KEY = 'jvc-settings';

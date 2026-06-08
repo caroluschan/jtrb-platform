@@ -5,13 +5,11 @@ interface UseVerseAlignOptions {
   leftRef: RefObject<HTMLDivElement>;
   rightRef: RefObject<HTMLDivElement>;
   enabled: boolean;
-  /** Changing this triggers re-alignment (e.g., verses reference changes on chapter change) */
   versesKey: unknown;
 }
 
 export function useVerseAlign({ leftRef, rightRef, enabled, versesKey }: UseVerseAlignOptions): void {
   const rafId = useRef<number | null>(null);
-  const timeoutId = useRef<number | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -28,25 +26,17 @@ export function useVerseAlign({ leftRef, rightRef, enabled, versesKey }: UseVers
         return;
       }
 
-      // Clear existing alignment before measuring
       clearAlignment(leftEl, rightEl);
 
       const leftVerses = leftEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
       const rightVerses = rightEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
 
       if (leftVerses.length === 0 || rightVerses.length === 0) {
-        // JSS might still be showing spinner — keep retrying
         rafId.current = requestAnimationFrame(tryAlign);
         return;
       }
 
-      // Both panels have verses — align now
       alignVerses(leftEl, rightEl);
-
-      // Schedule periodic re-check to catch DOM changes (e.g., furigana completion)
-      timeoutId.current = window.setTimeout(() => {
-        rafId.current = requestAnimationFrame(tryAlign);
-      }, 300);
     };
 
     rafId.current = requestAnimationFrame(tryAlign);
@@ -55,10 +45,6 @@ export function useVerseAlign({ leftRef, rightRef, enabled, versesKey }: UseVers
       if (rafId.current !== null) {
         cancelAnimationFrame(rafId.current);
         rafId.current = null;
-      }
-      if (timeoutId.current !== null) {
-        clearTimeout(timeoutId.current);
-        timeoutId.current = null;
       }
     };
   }, [enabled, versesKey]);
@@ -74,7 +60,6 @@ function alignVerses(leftEl: HTMLDivElement, rightEl: HTMLDivElement): void {
   const leftVerses = leftEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
   const rightVerses = rightEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
 
-  // Build map of verse number → element for each panel
   const leftMap = new Map<number, HTMLElement>();
   const rightMap = new Map<number, HTMLElement>();
 
@@ -87,7 +72,6 @@ function alignVerses(leftEl: HTMLDivElement, rightEl: HTMLDivElement): void {
     if (v) rightMap.set(Number(v), el);
   });
 
-  // For each verse in both panels, equalize height
   for (const [verseNum, leftVerseEl] of leftMap) {
     const rightVerseEl = rightMap.get(verseNum);
     if (!rightVerseEl) continue;

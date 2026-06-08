@@ -25,7 +25,7 @@ export interface BibleDB {
   rcuv: import('sql.js').Database;
 }
 
-export type ArrangementMode = 'default' | 'aligned';
+export type ArrangementMode = 'natural' | 'aligned';
 
 export interface Settings {
   fontSize: number;
