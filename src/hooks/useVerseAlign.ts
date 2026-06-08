@@ -11,10 +11,11 @@ interface UseVerseAlignOptions {
 
 export function useVerseAlign({ leftRef, rightRef, enabled, versesKey, fontSizeKey }: UseVerseAlignOptions): void {
   const rafId = useRef<number | null>(null);
+  const timerId = useRef<number | null>(null);
 
   useEffect(() => {
     if (!enabled) {
-      clearAlignment(leftRef.current, rightRef.current);
+      clearAll(leftRef.current, rightRef.current);
       return;
     }
 
@@ -27,8 +28,6 @@ export function useVerseAlign({ leftRef, rightRef, enabled, versesKey, fontSizeK
         return;
       }
 
-      clearAlignment(leftEl, rightEl);
-
       const leftVerses = leftEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
       const rightVerses = rightEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
 
@@ -37,7 +36,11 @@ export function useVerseAlign({ leftRef, rightRef, enabled, versesKey, fontSizeK
         return;
       }
 
-      alignVerses(leftEl, rightEl);
+      alignVerses(leftVerses, rightVerses);
+      rafId.current = requestAnimationFrame(tryAlign);
+      // timerId.current = window.setTimeout(() => {
+      //   rafId.current = requestAnimationFrame(tryAlign);
+      // }, 1);
     };
 
     rafId.current = requestAnimationFrame(tryAlign);
@@ -47,45 +50,42 @@ export function useVerseAlign({ leftRef, rightRef, enabled, versesKey, fontSizeK
         cancelAnimationFrame(rafId.current);
         rafId.current = null;
       }
+      if (timerId.current !== null) {
+        clearTimeout(timerId.current);
+        timerId.current = null;
+      }
     };
   }, [enabled, versesKey, fontSizeKey]);
 }
 
-function clearAlignment(leftEl: HTMLDivElement | null, rightEl: HTMLDivElement | null): void {
+function clearAll(leftEl: HTMLDivElement | null, rightEl: HTMLDivElement | null): void {
   if (!leftEl || !rightEl) return;
   leftEl.querySelectorAll<HTMLElement>('.verse[data-verse]').forEach(el => { el.style.minHeight = ''; });
   rightEl.querySelectorAll<HTMLElement>('.verse[data-verse]').forEach(el => { el.style.minHeight = ''; });
 }
 
-function alignVerses(leftEl: HTMLDivElement, rightEl: HTMLDivElement): void {
-  const leftVerses = leftEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
-  const rightVerses = rightEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
-
-  const leftMap = new Map<number, HTMLElement>();
+function alignVerses(
+  leftVerses: NodeListOf<HTMLElement>,
+  rightVerses: NodeListOf<HTMLElement>,
+): void {
   const rightMap = new Map<number, HTMLElement>();
-
-  leftVerses.forEach(el => {
-    const v = el.getAttribute('data-verse');
-    if (v) leftMap.set(Number(v), el);
-  });
   rightVerses.forEach(el => {
     const v = el.getAttribute('data-verse');
     if (v) rightMap.set(Number(v), el);
   });
 
-  for (const [verseNum, leftVerseEl] of leftMap) {
-    const rightVerseEl = rightMap.get(verseNum);
-    if (!rightVerseEl) continue;
+  leftVerses.forEach(leftEl => {
+    const v = leftEl.getAttribute('data-verse');
+    if (!v) return;
+    const rightEl = rightMap.get(Number(v));
+    if (!rightEl) return;
 
-    const leftHeight = leftVerseEl.offsetHeight;
-    const rightHeight = rightVerseEl.offsetHeight;
-    const maxH = Math.max(leftHeight, rightHeight);
+    leftEl.style.minHeight = '';
+    rightEl.style.minHeight = '';
 
-    if (leftHeight < maxH) {
-      leftVerseEl.style.minHeight = `${maxH}px`;
-    }
-    if (rightHeight < maxH) {
-      rightVerseEl.style.minHeight = `${maxH}px`;
-    }
-  }
+    const maxH = Math.max(leftEl.offsetHeight, rightEl.offsetHeight);
+
+    leftEl.style.minHeight = `${maxH}px`;
+    rightEl.style.minHeight = `${maxH}px`;
+  });
 }

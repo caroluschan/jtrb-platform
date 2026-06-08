@@ -19,6 +19,13 @@ export function useSettings(): UseSettingsReturn {
   const [settings, setSettings] = useLocalStorage<Settings>(STORAGE_KEY, DEFAULT_SETTINGS);
 
   useEffect(() => {
+    if (settings.arrangement === 'default' as ArrangementMode) {
+      setSettings(prev => ({ ...prev, arrangement: 'natural' }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (typeof document === 'undefined') return;
     document.documentElement.style.setProperty('--font-size', `${settings.fontSize}px`);
   }, [settings.fontSize]);
