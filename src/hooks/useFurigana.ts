@@ -16,7 +16,7 @@ export function useFurigana(): UseFuriganaReturn {
   useEffect(() => {
     let cancelled = false;
 
-    initFurigana()
+    initFurigana(import.meta.env.PROD)
       .then((instance) => {
         if (!cancelled) {
           kuroshiroRef.current = instance;

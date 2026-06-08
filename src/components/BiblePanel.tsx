@@ -2,6 +2,7 @@ import { forwardRef } from 'preact/compat';
 import { useMemo, useEffect, useState } from 'preact/hooks';
 import type { MergedVerse } from '../types';
 import { useFurigana } from '../hooks/useFurigana';
+import { cleanRcuvText } from '../utils/cleanText';
 
 interface BiblePanelProps {
   lang: 'jss' | 'rcuv';
@@ -65,7 +66,7 @@ export const BiblePanel = forwardRef<HTMLDivElement, BiblePanelProps>(
               )
             ) : (
               v.rcuv ? (
-                <span>{v.rcuv}</span>
+                <span>{cleanRcuvText(v.rcuv)}</span>
               ) : (
                 <span class="verse-missing">—</span>
               )
