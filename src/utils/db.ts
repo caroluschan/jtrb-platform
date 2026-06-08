@@ -15,7 +15,8 @@ let SQL: Awaited<ReturnType<typeof initSqlJs>> | null = null;
 async function getSqlJs(): Promise<Awaited<ReturnType<typeof initSqlJs>>> {
   if (SQL) return SQL;
   SQL = await initSqlJs({
-    locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+    locateFile: (file: string) =>
+      import.meta.env.DEV ? `/${file}` : `/jtrb-platform/${file}`,
   });
   return SQL;
 }
