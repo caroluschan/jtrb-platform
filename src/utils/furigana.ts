@@ -28,10 +28,12 @@ async function decompressBrotliResponse(
     offset += c.byteLength;
   }
 
-  return new Response(result.buffer, {
+  return new Response(result, {
     status: response.status,
     statusText: response.statusText,
-    headers: response.headers,
+    headers: {
+      'Content-Type': 'application/octet-stream',
+    },
   });
 }
 
