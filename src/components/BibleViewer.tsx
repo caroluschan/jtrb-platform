@@ -34,6 +34,7 @@ export function BibleViewer() {
 		rightRef: rightPanelRef,
 		enabled: settings.arrangement === 'aligned' && panelsReady,
 		versesKey: verses,
+		fontSizeKey: settings.fontSize,
 	});
 
 	useScrollSync(leftPanelRef, rightPanelRef, panelsReady && settings.arrangement === 'aligned');

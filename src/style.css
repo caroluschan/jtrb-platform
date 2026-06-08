@@ -331,14 +331,8 @@ body {
   font-style: italic;
 }
 
-/* Compensate for furigana height in RCUV panel during aligned mode */
-[data-arrangement="aligned"] .panel[data-lang="rcuv"] .verse {
-  padding-top: 0.5em;
-}
-
-/* Keep furigana-equivalent space for JSS verses without furigana in aligned mode */
-[data-arrangement="aligned"] .panel[data-lang="jss"] .verse-text-plain {
-  display: inline-block;
+/* Furigana-equivalent space for verse number alignment in aligned mode */
+[data-arrangement="aligned"] .verse {
   padding-top: 0.5em;
 }
 

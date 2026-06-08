@@ -6,9 +6,10 @@ interface UseVerseAlignOptions {
   rightRef: RefObject<HTMLDivElement>;
   enabled: boolean;
   versesKey: unknown;
+  fontSizeKey: unknown;
 }
 
-export function useVerseAlign({ leftRef, rightRef, enabled, versesKey }: UseVerseAlignOptions): void {
+export function useVerseAlign({ leftRef, rightRef, enabled, versesKey, fontSizeKey }: UseVerseAlignOptions): void {
   const rafId = useRef<number | null>(null);
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export function useVerseAlign({ leftRef, rightRef, enabled, versesKey }: UseVers
         rafId.current = null;
       }
     };
-  }, [enabled, versesKey]);
+  }, [enabled, versesKey, fontSizeKey]);
 }
 
 function clearAlignment(leftEl: HTMLDivElement | null, rightEl: HTMLDivElement | null): void {
