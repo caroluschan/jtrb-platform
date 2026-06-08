@@ -8,33 +8,32 @@ export default defineConfig({
     preact(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Use our own manifest.json (created by T3)
       manifest: false,
-      // Include manifest in the precache manually
       includeAssets: ['manifest.json', 'icons/icon-192x192.png', 'icons/icon-512x512.png'],
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
-        // Runtime caching for large DB files
         runtimeCaching: [
           {
             urlPattern: /\/db\/.*\.SQLite3$/,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'bible-db',
               expiration: {
                 maxEntries: 5,
-                maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+                maxAgeSeconds: 365 * 24 * 60 * 60,
               },
             },
           },
           {
             urlPattern: /\/dict\/.*$/,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'kuromoji-dict',
               expiration: {
                 maxEntries: 30,
-                maxAgeSeconds: 90 * 24 * 60 * 60, // 90 days
+                maxAgeSeconds: 90 * 24 * 60 * 60,
               },
             },
           },
