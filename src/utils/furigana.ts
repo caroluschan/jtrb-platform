@@ -2,15 +2,12 @@ import { Kuroshiro } from 'kuroshiro-browser';
 
 let interceptorInstalled = false;
 
-function installBrotliInterceptor(): void {
+function installDictInterceptor(): void {
   if (interceptorInstalled) return;
   interceptorInstalled = true;
-
-  if (import.meta.env.DEV) return;
   if (typeof window === 'undefined') return;
-  if (typeof DecompressionStream === 'undefined') return;
 
-  const originalFetch = window.fetch.bind(window);
+  const nativeFetch = window.fetch.bind(window);
   window.fetch = async function (
     input: RequestInfo | URL,
     init?: RequestInit,
@@ -24,48 +21,48 @@ function installBrotliInterceptor(): void {
             ? input.url
             : '';
 
-    if (url.includes('/dict/') && url.endsWith('.br')) {
-      const response = await originalFetch(input, init);
-      if (!response.ok) return response;
-
-      const buffer = await response.arrayBuffer();
-
-      try {
-        const ds = new DecompressionStream('brotli' as CompressionFormat);
-        const writer = ds.writable.getWriter();
-        writer.write(new Uint8Array(buffer));
-        await writer.close();
-
-        const reader = ds.readable.getReader();
-        const chunks: Uint8Array[] = [];
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-        }
-
-        let total = 0;
-        for (const c of chunks) total += c.byteLength;
-        const result = new Uint8Array(total);
-        let offset = 0;
-        for (const c of chunks) {
-          result.set(c, offset);
-          offset += c.byteLength;
-        }
-
-        return new Response(result, {
-          status: response.status,
-          headers: { 'Content-Type': 'application/octet-stream' },
-        });
-      } catch {
-        return new Response(buffer, {
-          status: response.status,
-          headers: { 'Content-Type': 'application/octet-stream' },
-        });
-      }
+    if (!url.includes('/dict/') || !url.endsWith('.br')) {
+      return nativeFetch(input, init);
     }
 
-    return originalFetch(input, init);
+    const filename = url.split('/').pop()!;
+    const prodUrl = `${window.location.origin}/jtrb-platform/dict/${filename}`;
+    const response = await nativeFetch(prodUrl, init);
+    if (!response.ok) return response;
+
+    const buffer = await response.arrayBuffer();
+
+    try {
+      const ds = new DecompressionStream('brotli' as CompressionFormat);
+      const writer = ds.writable.getWriter();
+      writer.write(new Uint8Array(buffer));
+      await writer.close();
+
+      const reader = ds.readable.getReader();
+      const chunks: Uint8Array[] = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      let total = 0;
+      for (const c of chunks) total += c.byteLength;
+      const result = new Uint8Array(total);
+      let offset = 0;
+      for (const c of chunks) {
+        result.set(c, offset);
+        offset += c.byteLength;
+      }
+
+      const headers = new Headers();
+      headers.set('Content-Type', 'application/octet-stream');
+      return new Response(result, { status: response.status, headers });
+    } catch {
+      const headers = new Headers();
+      headers.set('Content-Type', 'application/octet-stream');
+      return new Response(buffer, { status: response.status, headers });
+    }
   };
 }
 
@@ -77,15 +74,15 @@ let initPromise: Promise<Kuroshiro> | null = null;
 
 const cache = new Map<string, string>();
 
-export function initFurigana(isProd = true): Promise<Kuroshiro> {
+export function initFurigana(_isProd?: boolean): Promise<Kuroshiro> {
   if (kuroshiroInstance) {
     return Promise.resolve(kuroshiroInstance);
   }
   if (initPromise) {
     return initPromise;
   }
-  installBrotliInterceptor();
-  initPromise = Kuroshiro.buildAndInitWithKuromoji(isProd).then((instance) => {
+  installDictInterceptor();
+  initPromise = Kuroshiro.buildAndInitWithKuromoji(false).then((instance) => {
     kuroshiroInstance = instance;
     return instance;
   });
