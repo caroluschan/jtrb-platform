@@ -2,12 +2,46 @@ import { Kuroshiro } from 'kuroshiro-browser';
 
 let interceptorInstalled = false;
 
+async function decompressBrotliResponse(
+  response: Response,
+): Promise<Response> {
+  const compressed = await response.arrayBuffer();
+  const ds = new DecompressionStream('brotli' as CompressionFormat);
+  const writer = ds.writable.getWriter();
+  writer.write(compressed);
+  writer.close();
+
+  const reader = ds.readable.getReader();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+
+  let total = 0;
+  for (const c of chunks) total += c.byteLength;
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    result.set(c, offset);
+    offset += c.byteLength;
+  }
+
+  return new Response(result.buffer, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 function installBrotliInterceptor(): void {
   if (interceptorInstalled) return;
   interceptorInstalled = true;
 
   if (import.meta.env.DEV) return;
-  if (typeof window === 'undefined' || typeof DecompressionStream === 'undefined') return;
+  if (typeof window === 'undefined') return;
+  if (typeof DecompressionStream === 'undefined') return;
 
   const originalFetch = window.fetch.bind(window);
   window.fetch = async function (
@@ -25,25 +59,19 @@ function installBrotliInterceptor(): void {
 
     if (url.includes('/dict/') && url.endsWith('.br')) {
       const response = await originalFetch(input, init);
-      if (!response.ok || !response.body) return response;
-
-      const ds = new DecompressionStream('brotli' as CompressionFormat);
-      const decompressedStream = response.body.pipeThrough(ds);
-      return new Response(decompressedStream, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-      });
+      if (!response.ok) return response;
+      try {
+        return await decompressBrotliResponse(response);
+      } catch {
+        return response;
+      }
     }
 
     return originalFetch(input, init);
   };
 }
 
-// Regex to match any CJK unified ideograph (kanji) range
 const KANJI_RE = /[\u4e00-\u9faf\u3400-\u4dbf]/;
-
-// Regex to strip footnote tags: <f>①</f>, <n>...</n>
 const FOOTNOTE_RE = /<\/?[fn][^>]*>/g;
 
 let kuroshiroInstance: Kuroshiro | null = null;
