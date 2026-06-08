@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/jtrb-platform/sw.js', { scope: '/jtrb-platform/' })})}

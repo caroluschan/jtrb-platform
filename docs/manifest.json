@@ -1,0 +1,26 @@
+{
+  "name": "JvC Bible",
+  "short_name": "JvC Bible",
+  "description": "Japanese-Chinese side-by-side Bible",
+  "start_url": "/jtrb-platform/",
+  "scope": "/jtrb-platform/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "theme_color": "#1a1a2e",
+  "background_color": "#1a1a2e",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "/jtrb-platform/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/jtrb-platform/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

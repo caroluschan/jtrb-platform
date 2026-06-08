@@ -1,0 +1,29 @@
+{
+  "name": "jvc-bible",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:skip-tests": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "preact": "^10.26.4",
+    "sql.js": "^1.11.0",
+    "kuroshiro-browser": "^0.1.0"
+  },
+  "devDependencies": {
+    "vite": "^6.3.2",
+    "@preact/preset-vite": "^2.10.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1",
+    "@playwright/test": "^1.52.0",
+    "vite-plugin-pwa": "^1.0.0",
+    "@types/sql.js": "^1.4.9"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "JvC Bible",
+  "short_name": "JvC Bible",
+  "start_url": "/jtrb-platform/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "/jtrb-platform/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/jtrb-platform/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
