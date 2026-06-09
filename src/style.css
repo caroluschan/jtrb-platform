@@ -245,6 +245,8 @@ body {
   padding: 24px 20px;
   height: 100%;
   overscroll-behavior: contain;
+  touch-action: pan-y;
+  will-change: scroll-position;
 }
 
 .panel:first-child {

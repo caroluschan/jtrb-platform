@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useCallback } from 'preact/hooks';
 import type { RefObject } from 'preact';
 
 interface UseVerseAlignOptions {
@@ -10,8 +10,19 @@ interface UseVerseAlignOptions {
 }
 
 export function useVerseAlign({ leftRef, rightRef, enabled, versesKey, fontSizeKey }: UseVerseAlignOptions): void {
-  const rafId = useRef<number | null>(null);
-  const timerId = useRef<number | null>(null);
+  const alignScheduled = useRef(false);
+
+  const align = useCallback(() => {
+    const leftEl = leftRef.current;
+    const rightEl = rightRef.current;
+    if (!leftEl || !rightEl) return;
+
+    const leftVerses = leftEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
+    const rightVerses = rightEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
+    if (leftVerses.length === 0 || rightVerses.length === 0) return;
+
+    alignVerses(leftVerses, rightVerses);
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -19,43 +30,36 @@ export function useVerseAlign({ leftRef, rightRef, enabled, versesKey, fontSizeK
       return;
     }
 
-    const tryAlign = () => {
-      const leftEl = leftRef.current;
-      const rightEl = rightRef.current;
+    const leftEl = leftRef.current;
+    const rightEl = rightRef.current;
+    if (!leftEl || !rightEl) return;
 
-      if (!leftEl || !rightEl) {
-        rafId.current = requestAnimationFrame(tryAlign);
-        return;
-      }
-
-      const leftVerses = leftEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
-      const rightVerses = rightEl.querySelectorAll<HTMLElement>('.verse[data-verse]');
-
-      if (leftVerses.length === 0 || rightVerses.length === 0) {
-        rafId.current = requestAnimationFrame(tryAlign);
-        return;
-      }
-
-      alignVerses(leftVerses, rightVerses);
-      rafId.current = requestAnimationFrame(tryAlign);
-      // timerId.current = window.setTimeout(() => {
-      //   rafId.current = requestAnimationFrame(tryAlign);
-      // }, 1);
+    const scheduleAlign = () => {
+      if (alignScheduled.current) return;
+      alignScheduled.current = true;
+      requestAnimationFrame(() => {
+        align();
+        alignScheduled.current = false;
+      });
     };
 
-    rafId.current = requestAnimationFrame(tryAlign);
+    scheduleAlign();
+
+    const ro = new ResizeObserver(() => {
+      scheduleAlign();
+    });
+    ro.observe(leftEl);
+    ro.observe(rightEl);
+
+    const onResize = () => scheduleAlign();
+    window.addEventListener('resize', onResize, { passive: true });
 
     return () => {
-      if (rafId.current !== null) {
-        cancelAnimationFrame(rafId.current);
-        rafId.current = null;
-      }
-      if (timerId.current !== null) {
-        clearTimeout(timerId.current);
-        timerId.current = null;
-      }
+      ro.disconnect();
+      window.removeEventListener('resize', onResize);
+      clearAll(leftEl, rightEl);
     };
-  }, [enabled, versesKey, fontSizeKey]);
+  }, [enabled, versesKey, fontSizeKey, align]);
 }
 
 function clearAll(leftEl: HTMLDivElement | null, rightEl: HTMLDivElement | null): void {
